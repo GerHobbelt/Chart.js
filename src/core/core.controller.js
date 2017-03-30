@@ -263,7 +263,7 @@ module.exports = function(Chart) {
 					ctx: me.ctx,
 					chart: me,
 
-					weight = scaleOptions.order
+					weight: scaleOptions.order
 				});
 
 				scales[scale.id] = scale;
