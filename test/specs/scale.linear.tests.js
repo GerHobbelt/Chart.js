@@ -12,6 +12,7 @@ describe('Linear Scale', function() {
 
 			gridLines: {
 				color: 'rgba(0, 0, 0, 0.1)',
+				borderColor: 'rgba(0, 0, 0, 0.1)',
 				drawBorder: true,
 				drawOnChartArea: true,
 				drawTicks: true, // draw ticks extending towards the label
@@ -115,6 +116,35 @@ describe('Linear Scale', function() {
 		expect(chart.scales.yScale0).not.toEqual(undefined); // must construct
 		expect(chart.scales.yScale0.min).toBe(-100);
 		expect(chart.scales.yScale0.max).toBe(150);
+	});
+
+	it('Should correctly determine the max & min when no values provided and suggested minimum and maximum are set', function() {
+		var chart = window.acquireChart({
+			type: 'bar',
+			data: {
+				datasets: [{
+					yAxisID: 'yScale0',
+					data: []
+				}],
+				labels: ['a', 'b', 'c', 'd', 'e', 'f']
+			},
+			options: {
+				scales: {
+					yAxes: [{
+						id: 'yScale0',
+						type: 'linear',
+						ticks: {
+							suggestedMin: -10,
+							suggestedMax: 15
+						}
+					}]
+				}
+			}
+		});
+
+		expect(chart.scales.yScale0).not.toEqual(undefined); // must construct
+		expect(chart.scales.yScale0.min).toBe(-10);
+		expect(chart.scales.yScale0.max).toBe(15);
 	});
 
 	it('Should correctly determine the max & min data values ignoring hidden datasets', function() {
