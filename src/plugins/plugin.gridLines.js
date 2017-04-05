@@ -228,6 +228,11 @@ module.exports = function(Chart) {
 		id: 'gridLines',
 
 		beforeDatasetsDraw: function(chart) {
+			// Shut down the plugin if the chart is radar or polarArea
+			if (chart.scale !== undefined && chart.scale.options.type === "radialLinear") {
+				return;
+			}
+
 			var bordersToDraw = [];
 
 			// Properties used by all undefined borders. They are set by the first axis of the corresponding
