@@ -107,7 +107,11 @@ module.exports = function(Chart) {
 
 		var lineWidth, lineColor, borderDash, borderDashOffset;
 
-		for (var index = 0; index < scale.ticks.length; index++) {
+		// When gridLines.offsetGridLines is enabled, there is one less tick than
+		// there should be gridLines, so we have to take that into account
+		var gridLinesCount = scale.ticks.length + (gridLines.offsetGridLines ? 1 : 0);
+
+		for (var index = 0; index < gridLinesCount; index++) {
 			if (!gridLines.display) {
 				break;
 			}
@@ -171,9 +175,9 @@ module.exports = function(Chart) {
 				bordersToDraw.push(getUndefinedBorder(index, scale, chartArea, x1, x2, y1, y2));
 
 				// Add last gridLine of this scale as an undefined border
-				bordersToDraw.push(getUndefinedBorder(scale.ticks.length-1, scale, chartArea, x1, x2, y1, y2));
+				bordersToDraw.push(getUndefinedBorder(gridLinesCount-1, scale, chartArea, x1, x2, y1, y2));
 
-			} else if (index !== scale.ticks.length-1) {
+			} else if (index !== gridLinesCount-1) {
 				context.lineWidth = lineWidth;
 				context.strokeStyle = lineColor;
 				if (context.setLineDash) {
