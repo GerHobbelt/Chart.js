@@ -5,7 +5,7 @@ module.exports = function(Chart) {
 	var globalDefaults = Chart.defaults.global;
 
 	Chart.defaults.scale.border = {
-		display: true,
+		display: false,
 		color: 'rgba(0, 0, 0, 0.4)',
 		lineWidth: 1,
 		borderDash: [],
@@ -229,7 +229,7 @@ module.exports = function(Chart) {
 
 		beforeDatasetsDraw: function(chart) {
 			// Shut down the plugin if the chart is radar or polarArea
-			if (chart.scale !== undefined && chart.scale.options.type === "radialLinear") {
+			if (chart.scale !== undefined && chart.scale.options.type === 'radialLinear') {
 				return;
 			}
 
