@@ -247,9 +247,7 @@ module.exports = function(Chart) {
 					drawGridLines(chart, scale, undefinedBorderOptions, bordersToDraw);
 
 					// Adds the border of this scale to the array to be drawn later after all the gridLines are drawn
-					if (borderOptions.display) {
-						bordersToDraw.push(getScaleBorder(scale, borderOptions));
-					}
+					bordersToDraw.push(getScaleBorder(scale, borderOptions));
 				}
 			});
 
