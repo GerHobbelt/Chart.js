@@ -30,6 +30,73 @@ module.exports = function(Chart) {
 		context.restore();
 	}
 
+	function getUndefinedBorder(index, scale, chartArea, x1, x2, y1, y2) {
+		var gridLines = scale.options.gridLines;
+
+		var isHorizontal = scale.isHorizontal();
+
+		// If this is the firstIndex the given coordinates will be used
+		// LastIndex is added together with firstIndex, therefore the coordinates have to be
+		// adjusted(horizontal line must be moved to the bottom and vertical must be moved to the right)
+		var undefinedBorder = {
+			x1: index === 0 || !isHorizontal ? x1 : chartArea.right,
+			x2: index === 0 || !isHorizontal ? x2 : chartArea.right,
+			y1: index === 0 || isHorizontal ? y1 : chartArea.bottom,
+			y2: index === 0 || isHorizontal ? y2 : chartArea.bottom,
+			isHorizontal: isHorizontal,
+			undefinedBorder: true
+		};
+
+		// If this gridLine is zeroLine, include zeroLine properties
+		if ((typeof scale.zeroLineIndex !== 'undefined' ? scale.zeroLineIndex : 0) === index) {
+			undefinedBorder.forceUseStyle = true;
+			undefinedBorder.lineWidth = gridLines.zeroLineWidth;
+			undefinedBorder.lineColor = gridLines.zeroLineColor;
+			undefinedBorder.borderDash = gridLines.zeroLineBorderDash;
+			undefinedBorder.borderDashOffset = gridLines.zeroLineBorderDashOffset;
+		}
+
+		return undefinedBorder;
+	}
+
+	function getScaleBorder(scale, borderOptions) {
+		// Get position of the border
+		var bx1 = scale.left,
+			bx2 = scale.right,
+			by1 = scale.top,
+			by2 = scale.bottom;
+
+		var borderAliasPixel = helpers.aliasPixel(borderOptions.lineWidth);
+
+		if (scale.isHorizontal()) {
+			by1 = by2 = scale.position === 'top' ? scale.bottom : scale.top;
+			by1 += borderAliasPixel;
+			by2 += borderAliasPixel;
+		} else {
+			bx1 = bx2 = scale.position === 'left' ? scale.right : scale.left;
+			bx1 += borderAliasPixel;
+			bx2 += borderAliasPixel;
+		}
+
+		// Axis border(the line near ticks) is defined when border.display option is true or undefined otherwise
+		// Undefined borders may not be drawn in the end if there is any defined border overlapping them,
+		// therefore they must be drawn after all the scales are iterated
+		// The direction has to be flipped because the border line of an axis has the opposite direction than
+		// its gridLines. For visual explanation check the issue #4041
+		return {
+			x1: bx1,
+			x2: bx2,
+			y1: by1,
+			y2: by2,
+			isHorizontal: !scale.isHorizontal(),
+			lineWidth: borderOptions.lineWidth,
+			lineColor: borderOptions.color,
+			borderDash: helpers.getValueOrDefault(borderOptions.borderDash, globalDefaults.borderDash),
+			borderDashOffset: helpers.getValueOrDefault(borderOptions.borderDashOffset, globalDefaults.borderDashOffset),
+			undefinedBorder: !borderOptions.display
+		};
+	}
+
 	function drawGridLines(chart, scale, undefinedBorderOptions, bordersToDraw) {
 		var context = chart.ctx;
 		var chartArea = chart.chartArea;
@@ -84,40 +151,28 @@ module.exports = function(Chart) {
 				// specific direction is already set, as every direction can only have them set once.
 				if (isHorizontal && undefinedBorderOptions.horizontal === undefined) {
 					undefinedBorderOptions.horizontal = {
-						lineWidth: lineWidth,
-						lineColor: lineColor,
-						borderDash: borderDash,
-						borderDashOffset: borderDashOffset
+						lineWidth: gridLines.lineWidth,
+						lineColor: gridLines.lineColor,
+						borderDash: gridLines.borderDash,
+						borderDashOffset: gridLines.borderDashOffset
 					};
 				} else if (!isHorizontal && undefinedBorderOptions.vertical === undefined) {
 					undefinedBorderOptions.vertical = {
-						lineWidth: lineWidth,
-						lineColor: lineColor,
-						borderDash: borderDash,
-						borderDashOffset: borderDashOffset
+						lineWidth: gridLines.lineWidth,
+						lineColor: gridLines.lineColor,
+						borderDash: gridLines.borderDash,
+						borderDashOffset: gridLines.borderDashOffset
 					};
 				} else {
 					continue;
 				}
 
 				// Add first gridLine of this scale as an undefined border
-				bordersToDraw.push({
-					x1: x1,
-					x2: x2,
-					y1: y1,
-					y2: y2,
-					isHorizontal: isHorizontal,
-					undefinedBorder: true
-				});
+				bordersToDraw.push(getUndefinedBorder(index, scale, chartArea, x1, x2, y1, y2));
+
 				// Add last gridLine of this scale as an undefined border
-				bordersToDraw.push({
-					x1: isHorizontal ? chartArea.right : x1,
-					x2: isHorizontal ? chartArea.right : x2,
-					y1: isHorizontal ? y1 : chartArea.bottom,
-					y2: isHorizontal ? y2 : chartArea.bottom,
-					isHorizontal: isHorizontal,
-					undefinedBorder: true
-				});
+				bordersToDraw.push(getUndefinedBorder(scale.ticks.length-1, scale, chartArea, x1, x2, y1, y2));
+
 			} else if (index !== scale.ticks.length-1) {
 				context.lineWidth = lineWidth;
 				context.strokeStyle = lineColor;
@@ -132,44 +187,6 @@ module.exports = function(Chart) {
 		}
 	}
 
-	function getScaleBorder(scale, borderOptions) {
-		// Get position of the border
-		var bx1 = scale.left,
-			bx2 = scale.right,
-			by1 = scale.top,
-			by2 = scale.bottom;
-
-		var borderAliasPixel = helpers.aliasPixel(borderOptions.lineWidth);
-
-		if (scale.isHorizontal()) {
-			by1 = by2 = scale.position === 'top' ? scale.bottom : scale.top;
-			by1 += borderAliasPixel;
-			by2 += borderAliasPixel;
-		} else {
-			bx1 = bx2 = scale.position === 'left' ? scale.right : scale.left;
-			bx1 += borderAliasPixel;
-			bx2 += borderAliasPixel;
-		}
-
-		// Axis border(the line near ticks) is defined when border.display option is true or undefined otherwise
-		// Undefined borders may not be drawn in the end if there is any defined border overlapping them,
-		// therefore they must be drawn after all the scales are iterated
-		// The direction has to be flipped because the border line of an axis has the opposite direction than
-		// its gridLines. For visual explanation check the issue #4041
-		return {
-			x1: bx1,
-			x2: bx2,
-			y1: by1,
-			y2: by2,
-			isHorizontal: !scale.isHorizontal(),
-			lineWidth: borderOptions.lineWidth,
-			lineColor: borderOptions.color,
-			borderDash: helpers.getValueOrDefault(borderOptions.borderDash, globalDefaults.borderDash),
-			borderDashOffset: helpers.getValueOrDefault(borderOptions.borderDashOffset, globalDefaults.borderDashOffset),
-			undefinedBorder: !borderOptions.display
-		};
-	}
-
 	function drawBorders(context, bordersToDraw, undefinedBorderOptions) {
 		// Draws all the borders. Skips undefined orders which would be overlapped by a defined border
 		helpers.each(bordersToDraw, function(borderToDraw) {
@@ -177,27 +194,27 @@ module.exports = function(Chart) {
 			if (!borderToDraw.undefinedBorder || bordersToDraw.findIndex(bordersOverlap, borderToDraw) === -1) {
 				context.save();
 
-				// Sets properties for an undefined border from the common properties depending on its direction.
-				if (borderToDraw.undefinedBorder) {
-					var _undefinedBorderOptions = borderToDraw.isHorizontal ? undefinedBorderOptions.horizontal : undefinedBorderOptions.vertical;
+				var _undefinedBorderOptions = borderToDraw.isHorizontal ? undefinedBorderOptions.horizontal : undefinedBorderOptions.vertical;
 
-					context.lineWidth = _undefinedBorderOptions.lineWidth;
-					context.strokeStyle = _undefinedBorderOptions.lineColor;
-					if (context.setLineDash) {
-						context.setLineDash(_undefinedBorderOptions.borderDash);
-						context.lineDashOffset = _undefinedBorderOptions.borderDashOffset;
-					}
-				} else {
-					context.lineWidth = borderToDraw.lineWidth;
-					context.strokeStyle = borderToDraw.lineColor;
-					if (context.setLineDash) {
-						context.setLineDash(borderToDraw.borderDash);
-						context.lineDashOffset = borderToDraw.borderDashOffset;
-					}
+				// Use given properties if border is defined or they were explictly set(e.g. when the undefined border is also a zeroLine)
+				// Otherwise use default properties for undefined borders
+				var useGivenOptions = !borderToDraw.undefinedBorder || borderToDraw.forceUseStyle;
+
+				context.lineWidth = useGivenOptions ? borderToDraw.lineWidth : _undefinedBorderOptions.lineWidth;
+				context.strokeStyle = useGivenOptions ? borderToDraw.lineColor : _undefinedBorderOptions.lineColor;
+				if (context.setLineDash) {
+					context.setLineDash(useGivenOptions ? borderToDraw.borderDash : _undefinedBorderOptions.borderDash);
+					context.lineDashOffset = useGivenOptions ? borderToDraw.borderDashOffset : _undefinedBorderOptions.borderDashOffset;
 				}
 
 				// Draw the border
 				drawLine(context, borderToDraw.x1, borderToDraw.x2, borderToDraw.y1, borderToDraw.y2);
+
+				// If there are no defined borders overlapping this undefined border, mark it
+				// as defined to prevent other undefined borders to be drawn over it
+				if (borderToDraw.undefinedBorder) {
+					borderToDraw.undefinedBorder = false;
+				}
 			}
 		});
 	}
