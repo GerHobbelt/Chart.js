@@ -21,6 +21,16 @@ module.exports = function(Chart) {
 	}
 
 	function drawLine(context, x1, x2, y1, y2) {
+		var aliasPixel = helpers.aliasPixel(context.lineWidth);
+
+		if (y1 === y2) {
+			y1 += aliasPixel;
+			y2 += aliasPixel;
+		} else {
+			x1 += aliasPixel;
+			x2 += aliasPixel;
+		}
+
 		context.beginPath();
 
 		context.moveTo(x1, y1);
@@ -66,16 +76,10 @@ module.exports = function(Chart) {
 			by1 = scale.top,
 			by2 = scale.bottom;
 
-		var borderAliasPixel = helpers.aliasPixel(borderOptions.lineWidth);
-
 		if (scale.isHorizontal()) {
 			by1 = by2 = scale.position === 'top' ? scale.bottom : scale.top;
-			by1 += borderAliasPixel;
-			by2 += borderAliasPixel;
 		} else {
 			bx1 = bx2 = scale.position === 'left' ? scale.right : scale.left;
-			bx1 += borderAliasPixel;
-			bx2 += borderAliasPixel;
 		}
 
 		// Axis border(the line near ticks) is defined when border.display option is true or undefined otherwise
@@ -133,13 +137,12 @@ module.exports = function(Chart) {
 			var x1, x2, y1, y2;
 			if (isHorizontal) {
 				var xLineValue = scale.getPixelForTick(index);
-				xLineValue += helpers.aliasPixel(lineWidth);
 
 				x1 = x2 = xLineValue;
 				y1 = chartArea.top;
 				y2 = chartArea.bottom;
 			} else {
-				var yLineValue = scale.getPixelForTick(index) + helpers.aliasPixel(lineWidth);
+				var yLineValue = scale.getPixelForTick(index);
 
 				x1 = chartArea.left;
 				x2 = chartArea.right;
@@ -156,14 +159,14 @@ module.exports = function(Chart) {
 				if (isHorizontal && undefinedBorderOptions.horizontal === undefined) {
 					undefinedBorderOptions.horizontal = {
 						lineWidth: gridLines.lineWidth,
-						lineColor: gridLines.lineColor,
+						lineColor: gridLines.color,
 						borderDash: gridLines.borderDash,
 						borderDashOffset: gridLines.borderDashOffset
 					};
 				} else if (!isHorizontal && undefinedBorderOptions.vertical === undefined) {
 					undefinedBorderOptions.vertical = {
 						lineWidth: gridLines.lineWidth,
-						lineColor: gridLines.lineColor,
+						lineColor: gridLines.color,
 						borderDash: gridLines.borderDash,
 						borderDashOffset: gridLines.borderDashOffset
 					};
