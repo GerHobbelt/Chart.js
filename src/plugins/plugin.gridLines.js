@@ -1,5 +1,13 @@
 'use strict';
 
+// Undefined border is a border not explictly set by any axis. Four undefined borders are always created around
+// the chartArea. If an axis has border.display set to true, a defined border will be created for that axis, if
+// it's set to false an undefined border will be created.
+// If there is an undefined and a defined border overlapping each other, only the defined will be drawn.
+//
+// Simplified, undefined border is some kind of placeholder for every border, which is replaced by a defined one,
+// if such border overlapping it exists, guarateeing there will be always a line, even if the border isn't displayed.
+
 module.exports = function(Chart) {
 	var helpers = Chart.helpers;
 	var globalDefaults = Chart.defaults.global;
