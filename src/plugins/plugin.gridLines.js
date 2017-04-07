@@ -54,7 +54,7 @@ module.exports = function(Chart) {
 			undefinedBorder: true
 		};
 
-		if(!isHorizontal) {
+		if (!isHorizontal) {
 			border.y1 = border.y2 = (index === 0 ? chartArea.top : chartArea.bottom);
 		} else {
 			border.x1 = border.x2 = (index === 0 ? chartArea.left : chartArea.right);
@@ -75,7 +75,7 @@ module.exports = function(Chart) {
 	function getChartAreaBorders(scale, chartArea, gridLinesCount, undefinedBorderOptions) {
 		var gridLines = scale.options.gridLines;
 		var isHorizontal = scale.isHorizontal();
-		
+
 		// The undefinedBorder variables are used to determine if the undefinedBorders for the specific
 		// direction(determined by isHorizontal) is already set, as every direction can only have them set once.
 		if (isHorizontal && undefinedBorderOptions.horizontal === undefined) {
