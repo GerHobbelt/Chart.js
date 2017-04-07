@@ -1,5 +1,13 @@
 'use strict';
 
+// Undefined border is a border not explictly set by any axis. Four undefined borders are always created around
+// the chartArea. If an axis has border.display set to true, a defined border will be created for that axis, if
+// it's set to false an undefined border will be created.
+// If there is an undefined and a defined border overlapping each other, only the defined will be drawn.
+//
+// Simplified, undefined border is some kind of placeholder for every border, which is replaced by a defined one,
+// if such border overlapping it exists, guarateeing there will be always a line, even if the border isn't displayed.
+
 module.exports = function(Chart) {
 	var helpers = Chart.helpers;
 	var globalDefaults = Chart.defaults.global;
@@ -21,6 +29,16 @@ module.exports = function(Chart) {
 	}
 
 	function drawLine(context, x1, x2, y1, y2) {
+		var aliasPixel = helpers.aliasPixel(context.lineWidth);
+
+		if (y1 === y2) {
+			y1 += aliasPixel;
+			y2 += aliasPixel;
+		} else {
+			x1 += aliasPixel;
+			x2 += aliasPixel;
+		}
+
 		context.beginPath();
 
 		context.moveTo(x1, y1);
@@ -30,106 +48,65 @@ module.exports = function(Chart) {
 		context.restore();
 	}
 
-	function drawGridLines(chart, scale, undefinedBorderOptions, bordersToDraw) {
-		var context = chart.ctx;
-		var chartArea = chart.chartArea;
-
+	function getChartAreaBorder(index, scale, chartArea) {
 		var gridLines = scale.options.gridLines;
 
 		var isHorizontal = scale.isHorizontal();
 
-		var lineWidth, lineColor, borderDash, borderDashOffset;
+		var border = {
+			x1: chartArea.left,
+			x2: chartArea.right,
+			y1: chartArea.top,
+			y2: chartArea.bottom,
+			isHorizontal: isHorizontal,
+			undefinedBorder: true
+		};
 
-		for (var index = 0; index < scale.ticks.length; index++) {
-			if (!gridLines.display) {
-				break;
-			}
-
-			// Set visual settings for current gridLine
-			if (index === (typeof scale.zeroLineIndex !== 'undefined' ? scale.zeroLineIndex : 0)) {
-				lineWidth = gridLines.zeroLineWidth;
-				lineColor = gridLines.zeroLineColor;
-				borderDash = gridLines.zeroLineBorderDash;
-				borderDashOffset = gridLines.zeroLineBorderDashOffset;
-			} else {
-				lineWidth = helpers.getValueAtIndexOrDefault(gridLines.lineWidth, index);
-				lineColor = helpers.getValueAtIndexOrDefault(gridLines.color, index);
-				borderDash = helpers.getValueOrDefault(gridLines.borderDash, globalDefaults.borderDash);
-				borderDashOffset = helpers.getValueOrDefault(gridLines.borderDashOffset, globalDefaults.borderDashOffset);
-			}
-
-			// Get position of current gridLine
-			var x1, x2, y1, y2;
-			if (isHorizontal) {
-				var xLineValue = scale.getPixelForTick(index);
-				xLineValue += helpers.aliasPixel(lineWidth);
-
-				x1 = x2 = xLineValue;
-				y1 = chartArea.top;
-				y2 = chartArea.bottom;
-			} else {
-				var yLineValue = scale.getPixelForTick(index) + helpers.aliasPixel(lineWidth);
-
-				x1 = chartArea.left;
-				x2 = chartArea.right;
-				y1 = y2 = yLineValue;
-			}
-
-			// First and last gridLine of first found axis for each direction are marked as undefined borders.
-			// First and last gridLines are never drawn for any scale to ensure that there won't be any overlapping on chartArea borders.
-			// All four sides of chartArea have to be marked, to be sure there will always be some border. If the border is defined by
-			// any axis, that border will be preferred
-			if (index === 0) {
-				// The undefinedBorder variables are used to determine if the undefinedBorders for the
-				// specific direction is already set, as every direction can only have them set once.
-				if (isHorizontal && undefinedBorderOptions.horizontal === undefined) {
-					undefinedBorderOptions.horizontal = {
-						lineWidth: lineWidth,
-						lineColor: lineColor,
-						borderDash: borderDash,
-						borderDashOffset: borderDashOffset
-					};
-				} else if (!isHorizontal && undefinedBorderOptions.vertical === undefined) {
-					undefinedBorderOptions.vertical = {
-						lineWidth: lineWidth,
-						lineColor: lineColor,
-						borderDash: borderDash,
-						borderDashOffset: borderDashOffset
-					};
-				} else {
-					continue;
-				}
-
-				// Add first gridLine of this scale as an undefined border
-				bordersToDraw.push({
-					x1: x1,
-					x2: x2,
-					y1: y1,
-					y2: y2,
-					isHorizontal: isHorizontal,
-					undefinedBorder: true
-				});
-				// Add last gridLine of this scale as an undefined border
-				bordersToDraw.push({
-					x1: isHorizontal ? chartArea.right : x1,
-					x2: isHorizontal ? chartArea.right : x2,
-					y1: isHorizontal ? y1 : chartArea.bottom,
-					y2: isHorizontal ? y2 : chartArea.bottom,
-					isHorizontal: isHorizontal,
-					undefinedBorder: true
-				});
-			} else if (index !== scale.ticks.length-1) {
-				context.lineWidth = lineWidth;
-				context.strokeStyle = lineColor;
-				if (context.setLineDash) {
-					context.setLineDash(borderDash);
-					context.lineDashOffset = borderDashOffset;
-				}
-
-				// Draw current gridLine
-				drawLine(context, x1, x2, y1, y2);
-			}
+		if (!isHorizontal) {
+			border.y1 = border.y2 = (index === 0 ? chartArea.top : chartArea.bottom);
+		} else {
+			border.x1 = border.x2 = (index === 0 ? chartArea.left : chartArea.right);
 		}
+
+		// If this gridLine is zeroLine, include zeroLine properties
+		if ((typeof scale.zeroLineIndex !== 'undefined' ? scale.zeroLineIndex : 0) === index) {
+			border.forceUseStyle = true;
+			border.lineWidth = gridLines.zeroLineWidth;
+			border.lineColor = gridLines.zeroLineColor;
+			border.borderDash = gridLines.zeroLineBorderDash;
+			border.borderDashOffset = gridLines.zeroLineBorderDashOffset;
+		}
+
+		return border;
+	}
+
+	function getChartAreaBorders(scale, chartArea, gridLinesCount, undefinedBorderOptions) {
+		var gridLines = scale.options.gridLines;
+		var isHorizontal = scale.isHorizontal();
+
+		// The undefinedBorder variables are used to determine if the undefinedBorders for the specific
+		// direction(determined by isHorizontal) is already set, as every direction can only have them set once.
+		if (isHorizontal && undefinedBorderOptions.horizontal === undefined) {
+			undefinedBorderOptions.horizontal = {
+				lineWidth: gridLines.lineWidth,
+				lineColor: gridLines.color,
+				borderDash: gridLines.borderDash,
+				borderDashOffset: gridLines.borderDashOffset
+			};
+		} else if (!isHorizontal && undefinedBorderOptions.vertical === undefined) {
+			undefinedBorderOptions.vertical = {
+				lineWidth: gridLines.lineWidth,
+				lineColor: gridLines.color,
+				borderDash: gridLines.borderDash,
+				borderDashOffset: gridLines.borderDashOffset
+			};
+		} else {
+			// Ensures that every chartArea border is added only once
+			return undefined;
+		}
+
+		// Get the first and last gridLine as undefined borders
+		return [getChartAreaBorder(0, scale, chartArea), getChartAreaBorder(gridLinesCount-1, scale, chartArea)];
 	}
 
 	function getScaleBorder(scale, borderOptions) {
@@ -139,16 +116,10 @@ module.exports = function(Chart) {
 			by1 = scale.top,
 			by2 = scale.bottom;
 
-		var borderAliasPixel = helpers.aliasPixel(borderOptions.lineWidth);
-
 		if (scale.isHorizontal()) {
 			by1 = by2 = scale.position === 'top' ? scale.bottom : scale.top;
-			by1 += borderAliasPixel;
-			by2 += borderAliasPixel;
 		} else {
 			bx1 = bx2 = scale.position === 'left' ? scale.right : scale.left;
-			bx1 += borderAliasPixel;
-			bx2 += borderAliasPixel;
 		}
 
 		// Axis border(the line near ticks) is defined when border.display option is true or undefined otherwise
@@ -170,6 +141,79 @@ module.exports = function(Chart) {
 		};
 	}
 
+	function drawGridLines(chart, scale, undefinedBorderOptions, bordersToDraw) {
+		var context = chart.ctx;
+		var chartArea = chart.chartArea;
+
+		var gridLines = scale.options.gridLines;
+
+		var isHorizontal = scale.isHorizontal();
+
+		var lineWidth, lineColor, borderDash, borderDashOffset;
+
+		// When gridLines.offsetGridLines is enabled, there is one less tick than
+		// there should be gridLines, so we have to take that into account
+		var gridLinesCount = scale.ticks.length + (gridLines.offsetGridLines ? 1 : 0);
+
+		// First and last gridLine of first found axis for each direction are marked as undefined borders.
+		// First and last gridLines are never drawn for any scale to ensure that there won't be any overlapping on chartArea borders.
+		// All four sides of chartArea have to be marked, to be sure there will always be some border. If the border is defined by
+		// any axis, that border will be preferred later
+		// getChartAreaBorder returns undefined when chartArea border for this direction were already marked
+		var chartAreaBorders = getChartAreaBorders(scale, chartArea, gridLinesCount, undefinedBorderOptions);
+		if (chartAreaBorders !== undefined) {
+			Array.prototype.push.apply(bordersToDraw, chartAreaBorders);
+		}
+
+		// Draw all gridLines excluding the first and the last
+		for (var index = 1; index < gridLinesCount - 1; index++) {
+			if (!gridLines.display) {
+				break;
+			} else if (scale.ticks[index] === null || scale.ticks[index] === undefined) {
+				continue;
+			}
+
+			// Set visual settings for current gridLine
+			if (index === (typeof scale.zeroLineIndex !== 'undefined' ? scale.zeroLineIndex : 0)) {
+				lineWidth = gridLines.zeroLineWidth;
+				lineColor = gridLines.zeroLineColor;
+				borderDash = gridLines.zeroLineBorderDash;
+				borderDashOffset = gridLines.zeroLineBorderDashOffset;
+			} else {
+				lineWidth = helpers.getValueAtIndexOrDefault(gridLines.lineWidth, index);
+				lineColor = helpers.getValueAtIndexOrDefault(gridLines.color, index);
+				borderDash = helpers.getValueOrDefault(gridLines.borderDash, globalDefaults.borderDash);
+				borderDashOffset = helpers.getValueOrDefault(gridLines.borderDashOffset, globalDefaults.borderDashOffset);
+			}
+
+			// Get position of current gridLine
+			var x1, x2, y1, y2;
+			if (isHorizontal) {
+				var xLineValue = scale.getPixelForTick(index);
+
+				x1 = x2 = xLineValue;
+				y1 = chartArea.top;
+				y2 = chartArea.bottom;
+			} else {
+				var yLineValue = scale.getPixelForTick(index);
+
+				x1 = chartArea.left;
+				x2 = chartArea.right;
+				y1 = y2 = yLineValue;
+			}
+
+			context.lineWidth = lineWidth;
+			context.strokeStyle = lineColor;
+			if (context.setLineDash) {
+				context.setLineDash(borderDash);
+				context.lineDashOffset = borderDashOffset;
+			}
+
+			// Draw current gridLine
+			drawLine(context, x1, x2, y1, y2);
+		}
+	}
+
 	function drawBorders(context, bordersToDraw, undefinedBorderOptions) {
 		// Draws all the borders. Skips undefined orders which would be overlapped by a defined border
 		helpers.each(bordersToDraw, function(borderToDraw) {
@@ -177,27 +221,27 @@ module.exports = function(Chart) {
 			if (!borderToDraw.undefinedBorder || bordersToDraw.findIndex(bordersOverlap, borderToDraw) === -1) {
 				context.save();
 
-				// Sets properties for an undefined border from the common properties depending on its direction.
-				if (borderToDraw.undefinedBorder) {
-					var _undefinedBorderOptions = borderToDraw.isHorizontal ? undefinedBorderOptions.horizontal : undefinedBorderOptions.vertical;
+				var _undefinedBorderOptions = borderToDraw.isHorizontal ? undefinedBorderOptions.horizontal : undefinedBorderOptions.vertical;
 
-					context.lineWidth = _undefinedBorderOptions.lineWidth;
-					context.strokeStyle = _undefinedBorderOptions.lineColor;
-					if (context.setLineDash) {
-						context.setLineDash(_undefinedBorderOptions.borderDash);
-						context.lineDashOffset = _undefinedBorderOptions.borderDashOffset;
-					}
-				} else {
-					context.lineWidth = borderToDraw.lineWidth;
-					context.strokeStyle = borderToDraw.lineColor;
-					if (context.setLineDash) {
-						context.setLineDash(borderToDraw.borderDash);
-						context.lineDashOffset = borderToDraw.borderDashOffset;
-					}
+				// Use given properties if border is defined or they were explictly set(e.g. when the undefined border is also a zeroLine)
+				// Otherwise use default properties for undefined borders
+				var useGivenOptions = !borderToDraw.undefinedBorder || borderToDraw.forceUseStyle;
+
+				context.lineWidth = useGivenOptions ? borderToDraw.lineWidth : _undefinedBorderOptions.lineWidth;
+				context.strokeStyle = useGivenOptions ? borderToDraw.lineColor : _undefinedBorderOptions.lineColor;
+				if (context.setLineDash) {
+					context.setLineDash(useGivenOptions ? borderToDraw.borderDash : _undefinedBorderOptions.borderDash);
+					context.lineDashOffset = useGivenOptions ? borderToDraw.borderDashOffset : _undefinedBorderOptions.borderDashOffset;
 				}
 
 				// Draw the border
 				drawLine(context, borderToDraw.x1, borderToDraw.x2, borderToDraw.y1, borderToDraw.y2);
+
+				// If there are no defined borders overlapping this undefined border, mark it
+				// as defined to prevent other undefined borders to be drawn over it
+				if (borderToDraw.undefinedBorder) {
+					borderToDraw.undefinedBorder = false;
+				}
 			}
 		});
 	}

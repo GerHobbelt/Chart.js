@@ -477,7 +477,8 @@ module.exports = function(Chart) {
 		},
 
 		// Actually draw the scale on the canvas
-		draw: function() {
+		// @param {rectangle} chartArea : the area of the chart to draw all ticks and labels on
+		draw: function(chartArea) {
 			var me = this;
 			var options = me.options;
 			if (!options.display) {
@@ -643,6 +644,21 @@ module.exports = function(Chart) {
 				});
 			});
 
+			// When offsetGridLines is enabled, there is one less tick mark than
+			// there are tick labels, thefore it has to be manually added
+			if (gridLines.offsetGridLines) {
+				itemsToDraw.push({
+					tx1: !isHorizontal ? xTickStart : chartArea.right,
+					ty1: !isHorizontal ? chartArea.bottom : yTickStart,
+					tx2: !isHorizontal ? xTickEnd : chartArea.right,
+					ty2: !isHorizontal ? chartArea.bottom : yTickEnd,
+					tmWidth: gridLines.lineWidth,
+					tmColor: gridLines.color,
+					tmBorderDash: gridLines.borderDash,
+					tmBorderDashOffset: gridLines.borderDashOffset
+				});
+			}
+
 			// Draw all of the tick labels and tick marks at the correct places
 			helpers.each(itemsToDraw, function(itemToDraw) {
 				if (gridLines.display) {
@@ -665,7 +681,7 @@ module.exports = function(Chart) {
 					context.restore();
 				}
 
-				if (optionTicks.display) {
+				if (optionTicks.display && itemToDraw.label !== undefined && itemToDraw.label !== '') {
 					context.save();
 					context.translate(itemToDraw.labelX, itemToDraw.labelY);
 					context.rotate(itemToDraw.rotation);
