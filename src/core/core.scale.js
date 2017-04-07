@@ -680,7 +680,7 @@ module.exports = function(Chart) {
 					context.restore();
 				}
 
-				if (optionTicks.display && itemToDraw.label !== undefined) {
+				if (optionTicks.display && itemToDraw.label !== undefined && itemToDraw.label !== '') {
 					context.save();
 					context.translate(itemToDraw.labelX, itemToDraw.labelY);
 					context.rotate(itemToDraw.rotation);
