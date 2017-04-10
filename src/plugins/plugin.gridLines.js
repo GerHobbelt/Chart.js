@@ -142,10 +142,13 @@ module.exports = function(Chart) {
 	}
 
 	function drawGridLines(chart, scale, undefinedBorderOptions, bordersToDraw) {
+		var gridLines = scale.options.gridLines;
+		if (!gridLines.display) {
+			return;
+		}
+
 		var context = chart.ctx;
 		var chartArea = chart.chartArea;
-
-		var gridLines = scale.options.gridLines;
 
 		var isHorizontal = scale.isHorizontal();
 
@@ -167,9 +170,7 @@ module.exports = function(Chart) {
 
 		// Draw all gridLines excluding the first and the last
 		for (var index = 1; index < gridLinesCount - 1; index++) {
-			if (!gridLines.display) {
-				break;
-			} else if (scale.ticks[index] === null || scale.ticks[index] === undefined) {
+			if (scale.ticks[index] === null || scale.ticks[index] === undefined) {
 				continue;
 			}
 
@@ -284,14 +285,16 @@ module.exports = function(Chart) {
 			var undefinedBorderOptions = {horizontal: undefined, vertical: undefined};
 
 			helpers.each(chart.scales, function(scale) {
-				var borderOptions = scale.options.border;
+				var scaleOptions = scale.options;
 
-				if (scale.options.display) {
+				if (scaleOptions.display) {
 					// Draw gridLines and mark undefined borders
 					drawGridLines(chart, scale, undefinedBorderOptions, bordersToDraw);
 
 					// Adds the border of this scale to the array to be drawn later after all the gridLines are drawn
-					bordersToDraw.push(getScaleBorder(scale, borderOptions));
+					if (scaleOptions.gridLines.display || scaleOptions.border.display) {
+						bordersToDraw.push(getScaleBorder(scale, scaleOptions.border));
+					}
 				}
 			});
 
