@@ -56,7 +56,7 @@ All point* properties can be specified as an array. If these are set to an array
 | `borderCapStyle` | `String` | Cap style of the line. See [MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/lineCap)
 | `borderJoinStyle` | `String` | Line joint style. See [MDN](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/lineJoin)
 | `cubicInterpolationMode` | `String` | Algorithm used to interpolate a smooth curve from the discrete data points. [more...](#cubicInterpolationMode)
-| `fill` | `Boolean/String` | How to fill the area under the line. [more...](#fill)
+| `fill` | `Boolean/String` | How to fill the area under the line. See [area charts](area.md)
 | `lineTension` | `Number` | Bezier curve tension of the line. Set to 0 to draw straightlines. This option is ignored if monotone cubic interpolation is used.
 | `pointBackgroundColor` | `Color/Color[]` | The fill color for points.
 | `pointBorderColor` | `Color/Color[]` | The border color for points.
@@ -70,26 +70,18 @@ All point* properties can be specified as an array. If these are set to an array
 | `pointHoverRadius` | `Number/Number[]` | The radius of the point when hovered.
 | `showLine` | `Boolean` | If false, the line is not drawn for this dataset.
 | `spanGaps` | `Boolean` | If true, lines will be drawn between points with no or null data. If false, points with `NaN` data will create a break in the line
-| `steppedLine` | `Boolean` | If true, the line is shown as a stepped line and 'lineTension' will be ignored.
+| `steppedLine` | `Boolean/String` | If the line is shown as a stepped line. [more...](#stepped-line)
 
 ### cubicInterpolationMode
 The following interpolation modes are supported:
 * 'default'
 * 'monotone'. 
 
-The 'default' algorithm uses a custom weighted cubic interpolation, which produces pleasant curves for all types of datasets. 
+The 'default' algorithm uses a custom weighted cubic interpolation, which produces pleasant curves for all types of datasets.
 
-The 'monotone' algorithm is more suited to `y = f(x)` datasets : it preserves monotonicity (or piecewise monotonicity) of the dataset being interpolated, and ensures local extremums (if any) stay at input data points. 
+The 'monotone' algorithm is more suited to `y = f(x)` datasets : it preserves monotonicity (or piecewise monotonicity) of the dataset being interpolated, and ensures local extremums (if any) stay at input data points.
 
 If left untouched (`undefined`), the global `options.elements.line.cubicInterpolationMode` property is used.
-
-### fill
-If `true`, fill the area under the line. The line is filled to the baseline. If the y axis has a 0 value, the line is filled to that point. If the axis has only negative values, the line is filled to the highest value. If the axis has only positive values, it is filled to the lowest value.
-
-String values to fill to specific locations are:
-* `'zero'`
-* `'top'`
-* `'bottom'`
 
 ### pointStyle
 The style of point. Options are:
@@ -105,6 +97,15 @@ The style of point. Options are:
 * 'triangle'
 
 If the option is an image, that image is drawn on the canvas using [drawImage](https://developer.mozilla.org/en/docs/Web/API/CanvasRenderingContext2D/drawImage).
+
+### Stepped Line
+The following values are supported for `steppedLine`:
+* `false`:  No Step Interpolation (default)
+* `true`: Step-before Interpolation (eq. 'before')
+* `'before'`: Step-before Interpolation
+* `'after'`: Step-after Interpolation
+
+If the `steppedLine` value is set to anything other than false, `lineTension` will be ignored.
 
 ## Configuration Options
 
@@ -133,7 +134,7 @@ The `data` property of a dataset for a line chart can be passed in two formats.
 data: [20, 10]
 ```
 
-When the `data` array is an array of numbers, the x axis is generally a [category](../axes/cartesian/category.md#Category Axis). The points are placed onto the axis using their position in the array.
+When the `data` array is an array of numbers, the x axis is generally a [category](../axes/cartesian/category.md#Category Axis). The points are placed onto the axis using their position in the array. When a line chart is created with a category axis, the `labels` property of the data object must be specified.
 
 ### Point[]
 

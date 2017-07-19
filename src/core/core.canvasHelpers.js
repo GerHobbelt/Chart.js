@@ -10,7 +10,7 @@ module.exports = function(Chart) {
 		if (typeof pointStyle === 'object') {
 			type = pointStyle.toString();
 			if (type === '[object HTMLImageElement]' || type === '[object HTMLCanvasElement]') {
-				ctx.drawImage(pointStyle, x - pointStyle.width / 2, y - pointStyle.height / 2);
+				ctx.drawImage(pointStyle, x - pointStyle.width / 2, y - pointStyle.height / 2, pointStyle.width, pointStyle.height);
 				return;
 			}
 		}
@@ -123,7 +123,11 @@ module.exports = function(Chart) {
 
 	helpers.lineTo = function(ctx, previous, target, flip) {
 		if (target.steppedLine) {
-			ctx.lineTo(target.x, previous.y);
+			if (target.steppedLine === 'after') {
+				ctx.lineTo(previous.x, target.y);
+			} else {
+				ctx.lineTo(target.x, previous.y);
+			}
 			ctx.lineTo(target.x, target.y);
 			return;
 		}

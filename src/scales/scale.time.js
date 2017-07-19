@@ -145,18 +145,19 @@ module.exports = function(Chart) {
 		var unitSizeInMilliSeconds = unitDefinition.size;
 		var sizeInUnits = Math.ceil((max - min) / unitSizeInMilliSeconds);
 		var multiplier = 1;
+		var range = max - min;
 
 		if (unitDefinition.steps) {
 			// Have an array of steps
 			var numSteps = unitDefinition.steps.length;
 			for (var i = 0; i < numSteps && sizeInUnits > maxTicks; i++) {
 				multiplier = unitDefinition.steps[i];
-				sizeInUnits = Math.ceil((max - min) / (unitSizeInMilliSeconds * multiplier));
+				sizeInUnits = Math.ceil(range / (unitSizeInMilliSeconds * multiplier));
 			}
 		} else {
-			while (sizeInUnits > maxTicks) {
+			while (sizeInUnits > maxTicks && maxTicks > 0) {
 				++multiplier;
-				sizeInUnits = Math.ceil((max - min) / (unitSizeInMilliSeconds * multiplier));
+				sizeInUnits = Math.ceil(range / (unitSizeInMilliSeconds * multiplier));
 			}
 		}
 
@@ -317,7 +318,7 @@ module.exports = function(Chart) {
 			me.displayFormat = timeOpts.displayFormats[unit];
 
 			var stepSize = timeOpts.stepSize || determineStepSize(minTimestamp || dataMin, maxTimestamp || dataMax, unit, maxTicks);
-			var ticks = me.ticks = Chart.Ticks.generators.time({
+			me.ticks = Chart.Ticks.generators.time({
 				maxTicks: maxTicks,
 				min: minTimestamp,
 				max: maxTimestamp,
@@ -331,8 +332,8 @@ module.exports = function(Chart) {
 
 			// At this point, we need to update our max and min given the tick values since we have expanded the
 			// range of the scale
-			me.max = helpers.max(ticks);
-			me.min = helpers.min(ticks);
+			me.max = helpers.max(me.ticks);
+			me.min = helpers.min(me.ticks);
 		},
 		// Get tooltip label
 		getLabelForIndex: function(index, datasetIndex) {
