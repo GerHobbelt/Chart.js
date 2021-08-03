@@ -587,12 +587,12 @@ module.exports = function(Chart) {
 						// bottom
 						textBaseline = !isRotated? 'top':'middle';
 						textAlign = !isRotated? 'center': 'right';
-						labelY = me.top + tl;
+						labelY = me.top + tl + optionTicks.padding;
 					} else {
 						// top
 						textBaseline = !isRotated? 'bottom':'middle';
 						textAlign = !isRotated? 'center': 'left';
-						labelY = me.bottom - tl;
+						labelY = me.bottom - tl + optionTicks.padding;
 					}
 
 					var xLineValue = me.getPixelForTick(index); // xvalues for ticks
