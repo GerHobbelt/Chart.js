@@ -290,8 +290,32 @@ module.exports = function(Chart) {
 				if (scaleOptions.display) {
 					// Draw gridLines and mark undefined borders
 					drawGridLines(chart, scale, undefinedBorderOptions, bordersToDraw);
+				}
+			});
 
-					// Adds the border of this scale to the array to be drawn later after all the gridLines are drawn
+			// Set common undefinedBorder properties to default gridLines options if no axis for the specific
+			// direction was found
+			setUndefinedBorderOptionsToDefault(undefinedBorderOptions);
+
+			drawBorders(chart.ctx, bordersToDraw, undefinedBorderOptions);
+		},
+
+		afterDatasetsDraw: function(chart) {
+			// Shut down the plugin if the chart is radar or polarArea
+			if (chart.scale !== undefined && chart.scale.options.type === 'radialLinear') {
+				return;
+			}
+
+			var bordersToDraw = [];
+
+			// Properties used by all undefined borders. They are set by the first axis of the corresponding
+			// orientation (y = horizontal, x = vertical)
+			var undefinedBorderOptions = {horizontal: undefined, vertical: undefined};
+
+			helpers.each(chart.scales, function(scale) {
+				var scaleOptions = scale.options;
+
+				if (scaleOptions.display) {
 					if (scaleOptions.gridLines.display || scaleOptions.border.display) {
 						bordersToDraw.push(getScaleBorder(scale, scaleOptions.border));
 					}
